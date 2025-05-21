@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set Firebase credentials path
-FIREBASE_CREDENTIALS = "C:/Users/Divyashree G P/OneDrive/Documents/keys/serviceAccountKey.json"
+FIREBASE_CREDENTIALS = "serviceAccountKey.json"
 
 if not FIREBASE_CREDENTIALS:
     raise ValueError("❌ Firebase credentials not found! Check your .env file or set the correct path.")

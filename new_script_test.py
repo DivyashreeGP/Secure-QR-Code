@@ -1,5 +1,5 @@
 import os
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/Divyashree G P/OneDrive/Documents/keys/serviceAccountKey.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "serviceAccountKey.json"
 
 from google.cloud import firestore
 
