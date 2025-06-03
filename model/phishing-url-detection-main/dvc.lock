@@ -1,0 +1,215 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/train.parquet
+      hash: md5
+      md5: 3c534049e2da8ae55ebb8c982f7bae31
+      size: 788989
+    - path: live/hyperparams.yaml
+      hash: md5
+      md5: e125bfde9dccd6ad394c8f649fd660ad
+      size: 340
+    - path: src/train.py
+      hash: md5
+      md5: b4c749910f9244adbe37ce18fb691573
+      size: 1527
+    params:
+      params.yaml:
+        data.train: data/train.parquet
+        model.pickle: live/model/model.pkl
+        train:
+          n_trials: 40
+          hyperparams:
+            max_ngram_word:
+              low: 1
+              high: 3
+            max_ngram_char:
+              low: 1
+              high: 5
+            lowercase:
+            - true
+            - false
+            use_idf:
+            - true
+            - false
+            C:
+              low: 1e-07
+              high: 10
+            tol:
+              low: 1e-05
+              high: 0.1
+            loss:
+            - hinge
+            - squared_hinge
+            calibration:
+            - isotonic
+            - sigmoid
+    outs:
+    - path: live/model/model.pkl
+      hash: md5
+      md5: d3f44ce570a1faec1e3c6233cf5178d8
+      size: 17066252
+  optimize:
+    cmd: python src/optimize.py
+    deps:
+    - path: data/train.parquet
+      hash: md5
+      md5: 3c534049e2da8ae55ebb8c982f7bae31
+      size: 788989
+    - path: src/optimize.py
+      hash: md5
+      md5: 6616ddde830212097b3a5e6f376e7374
+      size: 3607
+    params:
+      params.yaml:
+        data.train: data/train.parquet
+        train:
+          n_trials: 40
+          hyperparams:
+            max_ngram_word:
+              low: 1
+              high: 3
+            max_ngram_char:
+              low: 1
+              high: 5
+            lowercase:
+            - true
+            - false
+            use_idf:
+            - true
+            - false
+            C:
+              low: 1e-07
+              high: 10
+            tol:
+              low: 1e-05
+              high: 0.1
+            loss:
+            - hinge
+            - squared_hinge
+            calibration:
+            - isotonic
+            - sigmoid
+    outs:
+    - path: live/hyperparams.yaml
+      hash: md5
+      md5: e125bfde9dccd6ad394c8f649fd660ad
+      size: 340
+    - path: live/images/optimization_history.png
+      hash: md5
+      md5: 61891d211e98809fa328c3ac37de5bd6
+      size: 26091
+  modelcard:
+    cmd: python src/modelcard.py
+    deps:
+    - path: live/metrics.json
+      hash: md5
+      md5: ad399af0114f75fe824bf7894ec67e8a
+      size: 174
+    - path: resources/snippets
+      hash: md5
+      md5: f836043f98b4420789579aa9feb05a7a.dir
+      size: 4486
+      nfiles: 5
+    - path: resources/templates/modelcard.md.j2
+      hash: md5
+      md5: 01854b3b1d8d244f02a0192c3066aea0
+      size: 1864
+    - path: src/modelcard.py
+      hash: md5
+      md5: 0058f271ed76d03dce7c1ea7fb8553f9
+      size: 1562
+    outs:
+    - path: live/model/README.md
+      hash: md5
+      md5: 600066518eb748bb2d33b1fe81c2b797
+      size: 6195
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+    - path: data/test.parquet
+      hash: md5
+      md5: b589781569feb40bd244579d4e0e3e85
+      size: 430668
+    - path: live/model/model.pkl
+      hash: md5
+      md5: d3f44ce570a1faec1e3c6233cf5178d8
+      size: 17066252
+    - path: src/evaluate.py
+      hash: md5
+      md5: bb280fbd2bef14c3057217da2c78c577
+      size: 2066
+    params:
+      params.yaml:
+        data.test: data/test.parquet
+        model.pickle: live/model/model.pkl
+    outs:
+    - path: live/images/calibration_curve.png
+      hash: md5
+      md5: adc08c7526fb8e5d53a3ba108ef4c37f
+      size: 30019
+    - path: live/images/confusion_matrix.png
+      hash: md5
+      md5: 6ef0464a930778eef08cd146149a7123
+      size: 12866
+    - path: live/images/precision_recall_curve.png
+      hash: md5
+      md5: 1d86dcd81708c437e5efa7c5a58c4366
+      size: 22575
+    - path: live/images/roc_curve.png
+      hash: md5
+      md5: 21a5d11172382eb9090d63c0f62bfb4b
+      size: 36462
+    - path: live/images/score_distribution.png
+      hash: md5
+      md5: e493c52ee961fc4fc23d5108615f439f
+      size: 20059
+    - path: live/metrics.json
+      hash: md5
+      md5: ad399af0114f75fe824bf7894ec67e8a
+      size: 174
+  download_data:
+    cmd:
+    - powershell -Command "if (-not (Test-Path -Path data)) { New-Item -ItemType Directory
+      -Path data }"
+    - powershell -Command "Invoke-WebRequest 
+      'https://huggingface.co/datasets/pirocheto/phishing-url/resolve/main/data/train.parquet'
+      -OutFile 'data/train.parquet'"
+    - powershell -Command "Invoke-WebRequest 
+      'https://huggingface.co/datasets/pirocheto/phishing-url/resolve/main/data/test.parquet'
+      -OutFile 'data/test.parquet'"
+    deps:
+    - path: 
+        https://huggingface.co/datasets/pirocheto/phishing-url/resolve/main/data/test.parquet
+      hash: md5
+      checksum: '"b589781569feb40bd244579d4e0e3e85"'
+      size: 430668
+    - path: 
+        https://huggingface.co/datasets/pirocheto/phishing-url/resolve/main/data/train.parquet
+      hash: md5
+      checksum: '"3c534049e2da8ae55ebb8c982f7bae31"'
+      size: 788989
+    outs:
+    - path: data
+      hash: md5
+      md5: b8e1fb3456824207aea9c408a79f6e0f.dir
+      size: 1219657
+      nfiles: 2
+  create_onnx:
+    cmd: python src/create_onnx.py
+    deps:
+    - path: live/model/model.pkl
+      hash: md5
+      md5: d3f44ce570a1faec1e3c6233cf5178d8
+      size: 17066252
+    - path: src/create_onnx.py
+      hash: md5
+      md5: 76884a3a4f4a4c93a9183afe5c060220
+      size: 881
+    outs:
+    - path: live/model/model.onnx
+      hash: md5
+      md5: 7d7fdedf81ae1803a15a966f17975782
+      size: 23547864
