@@ -81,14 +81,6 @@ python qr_scanner.py
 - **Algorithm:** Random Forest / SVM  
 - **Model Host:** [Hugging Face Model Link](https://huggingface.co/your-model-name) ← *(Replace with actual model link)*
 
----
-
-## 📁 Project Structure
-
-<pre> ```bash Secure-QR-code-Scanner/ ├── model/ # Model files and training scripts ├── screenshots/ # UI screenshots ├── qr_scanner.py # Main app for GUI ├── web_app/ # Web version of the scanner │ ├── static/ │ ├── templates/ │ ├── app.py # Flask backend for web app │ └── ... ├── requirements.txt # Dependencies └── README.md ``` </pre>
-
-
----
 
 ## 🔐 Security Notes
 
