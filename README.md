@@ -101,6 +101,44 @@ Secure-QR-code-Scanner/
 - Followed GitHub's push protection rules
 
 ---
+---
+
+## 🌐 Web Application
+
+The **Secure QR Code Scanner** is also available as a responsive **Web Application**, built using **HTML**, **Bootstrap**, **JavaScript**, and **Flask**. It enables users to **scan QR codes directly using their camera** or **upload images** to check the safety of embedded URLs using a trained machine learning model.
+
+---
+
+### 🚀 Features
+
+- 📸 **Live Camera Scan** using ZXing
+- 🖼️ **Image Upload Mode** for scanning QR codes from files
+- ⚠️ **Smart Threat Detection & Redirection**:
+  - 🔴 Blocks redirection for highly malicious URLs
+  - 🟠 Asks user confirmation for suspicious links
+  - 🟡 Warns and redirects for moderately risky URLs
+  - 🟢 Directly redirects safe URLs
+- 🧠 Powered by an **ONNX phishing URL detection model**
+- 💡 Clean and responsive UI with **Dark Mode**
+
+---
+
+### 🖼️ Screenshots
+
+<!-- Add screenshots in the 'screenshots/' directory and link them here -->
+![Web App - Camera Scan Mode](screenshots/webapp-camera.png)
+![Web App - Upload Image Mode](screenshots/webapp-upload.png)
+![Web App - Threat Detection](screenshots/webapp-threat.png)
+
+---
+
+### ⚙️ How to Run Locally
+
+```bash
+git clone https://github.com/DivyashreeGP/Secure-QR-Code.git
+cd Secure-QR-Code/Web-app
+Activate virtual environment
+python app.py
 
 ## 📈 Future Improvements
 
@@ -117,8 +155,8 @@ Secure-QR-code-Scanner/
 | ------------------ | ------------------------------------------------------ |
 | **Divyashree G P** | Lead Developer, Model Builder, HuggingFace Integration |
 | **Bhavani**        | Model Building, Data Collection                        |
-| Lakshmi B M        | Idea Discussion, Initial Research                      |
-| Thanmai            | Documentation Review, Testing Feedback                 |
+| **Lakshmi B M**    | Idea Discussion, Initial Research                      |
+| **Thanmai Nutheti**| Documentation Review, Testing Feedback                 |
 
 
 ## 📜 License
