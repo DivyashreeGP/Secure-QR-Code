@@ -85,12 +85,8 @@ python qr_scanner.py
 
 ## 📁 Project Structure
 
-Secure-QR-code-Scanner/
-├── model/ # Model files and training scripts
-├── screenshots/ # UI screenshots
-├── qr_scanner.py # Main app
-├── requirements.txt
-└── README.md
+<pre> ```bash Secure-QR-code-Scanner/ ├── model/ # Model files and training scripts ├── screenshots/ # UI screenshots ├── qr_scanner.py # Main app for GUI ├── web_app/ # Web version of the scanner │ ├── static/ │ ├── templates/ │ ├── app.py # Flask backend for web app │ └── ... ├── requirements.txt # Dependencies └── README.md ``` </pre>
+
 
 ---
 
