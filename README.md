@@ -139,8 +139,8 @@ git clone https://github.com/DivyashreeGP/Secure-QR-Code.git
 cd Secure-QR-Code/Web-app
 Activate virtual environment
 python app.py
-
-## 📈 Future Improvements
+``` 
+### 📈 Future Improvements
 
 - [ ] Add QR code generation
 - [ ] Logging of suspicious scans
