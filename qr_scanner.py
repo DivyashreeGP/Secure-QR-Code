@@ -1,61 +1,102 @@
 import cv2
+import numpy as np
 from pyzbar.pyzbar import decode
+from huggingface_hub import hf_hub_download
+import onnxruntime as ort
+from tkinter import Tk, filedialog, messagebox, Button, Label
+import webbrowser
 
-def scan_qr_code(image_path):
-    """
-    Scans a QR code from an image file or webcam and extracts the URL.
-    """
-    if image_path:
-      
-        image = cv2.imread(image_path)
-        if image is None:
-         print("❌ Unable to read the image. Please check the file path.")
-         return None
+# Load ONNX model
+REPO_ID = "pirocheto/phishing-url-detection"
+FILENAME = "model.onnx"
+model_path = hf_hub_download(repo_id=REPO_ID, filename=FILENAME)
+sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
 
-        decoded_objects = decode(image)
-        if not decoded_objects:
-         print("❌ No QR code detected in the image.")
-         return None
-    
-        for obj in decoded_objects:
-         url = obj.data.decode("utf-8")
-         print(f"Extracted URL: {url}")
-         return url
-        
+# Predict function
+def predict_url(url):
+    inputs = np.array([url], dtype="str")
+    results = sess.run(None, {"inputs": inputs})[1]
+    score = results[0][1] * 100
+    return score
+
+# Handle result
+def handle_result(url, score):
+    if score > 80:
+        messagebox.showerror("Blocked - Highly Malicious URL",
+            f"❌ The scanned URL is **very likely** malicious!\n\nURL: {url}\nLikelihood: {score:.2f}%\n\nAccess blocked.")
+    elif score > 50:
+        choice = messagebox.askyesno("⚠️ Warning - Possibly Malicious",
+            f"This URL **may be unsafe**!\n\nURL: {url}\nLikelihood: {score:.2f}%\n\nDo you want to continue?")
+        if choice:
+            webbrowser.open(url)
+        else:
+            messagebox.showinfo("Aborted", "You chose not to proceed.")
+    elif score > 20:
+        messagebox.showwarning("Caution - Suspicious URL",
+            f"This URL is **somewhat suspicious**.\n\nURL: {url}\nLikelihood: {score:.2f}%\n\nProceeding with caution...")
+        webbrowser.open(url)
     else:
-        # Open webcam to scan QR code
-        cap = cv2.VideoCapture(0)
-        print("Show the QR code to the camera...")
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to capture image")
-                break
+        webbrowser.open(url)
 
-            decoded_objects = decode(frame)
-            for obj in decoded_objects:
-                url = obj.data.decode("utf-8")
-                print(f"Extracted URL: {url}")
+# Scan from webcam
+def scan_from_camera():
+    cap = cv2.VideoCapture(0)
+    scanned_urls = set()
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            continue
+
+        decoded_objects = decode(frame)
+        for qr in decoded_objects:
+            url = qr.data.decode('utf-8')
+            if url not in scanned_urls:
+                scanned_urls.add(url)
                 cap.release()
                 cv2.destroyAllWindows()
-                return url
-            
-            cv2.imshow("QR Scanner", frame)
+                score = predict_url(url)
+                handle_result(url, score)
+                return
 
-            # Press 'q' to exit scanning
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+        cv2.imshow("Camera - Press 'q' to quit", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-        cap.release()
-        cv2.destroyAllWindows()
-        return None
+    cap.release()
+    cv2.destroyAllWindows()
 
-# Example usage
+# Scan from uploaded image
+def scan_from_image():
+    filepath = filedialog.askopenfilename(title="Select an Image",
+                                          filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")])
+    if not filepath:
+        return
+
+    image = cv2.imread(filepath)
+    decoded_objects = decode(image)
+
+    if not decoded_objects:
+        messagebox.showerror("Error", "No QR code found in the image.")
+        return
+
+    url = decoded_objects[0].data.decode('utf-8')
+    score = predict_url(url)
+    handle_result(url, score)
+
+# GUI with choice
+def launch_gui():
+    root = Tk()
+    root.title("Secure QR Code Scanner")
+    root.geometry("400x200")
+
+    Label(root, text="Choose input method:", font=("Helvetica", 14)).pack(pady=20)
+
+    Button(root, text="📷 Scan from Camera", font=("Helvetica", 12), command=lambda: [root.destroy(), scan_from_camera(), launch_gui()]).pack(pady=10)
+    Button(root, text="🖼️ Upload QR Image", font=("Helvetica", 12), command=lambda: [root.destroy(), scan_from_image(), launch_gui()]).pack(pady=10)
+
+    root.mainloop()
+
+# Entry point
 if __name__ == "__main__":
-    #extracted_url = scan_qr_code()  # Use webcam
-    extracted_url = scan_qr_code("image.png")  # Use an image file
-    
-    if extracted_url:
-        print(f"Extracted URL: {extracted_url}")
-    else:
-        print("No QR code detected.")
+    launch_gui()

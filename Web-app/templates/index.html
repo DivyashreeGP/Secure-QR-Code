@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secure QR Code Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+    }
+    #video {
+      border-radius: 0.5rem;
+      max-width: 100%;
+      aspect-ratio: 4 / 3;
+      background: black;
+    }
+    #result {
+      margin-top: 1rem;
+      max-width: 600px;
+      word-wrap: break-word;
+    }
+    #upload-btn {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="mb-4">🔒 Secure QR Code Scanner</h1>
+
+  <button id="switchModeBtn" class="btn btn-outline-light mb-3">Switch to Image Upload</button>
+
+  <video id="video" autoplay muted playsinline></video>
+
+  <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+
+  <button id="upload-btn" class="btn btn-light d-none">Upload Image</button>
+
+  <div id="result"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const resultDiv = document.getElementById('result');
+    const switchModeBtn = document.getElementById('switchModeBtn');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('upload-btn');
+
+    let selectedDeviceId;
+    let codeReader = null;
+    let scanning = true;
+
+    function showMessage(type, message) {
+      resultDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    }
+
+    function clearMessage() {
+      resultDiv.innerHTML = '';
+    }
+
+  async function startCamera() {
+  console.log("Starting camera scan...");
+  video.style.display = 'block';  // show video element
+  codeReader = new ZXing.BrowserQRCodeReader();
+  try {
+    const devices = await codeReader.listVideoInputDevices();
+    console.log("Video input devices found:", devices);
+    selectedDeviceId = devices.length > 0 ? devices[0].deviceId : null;
+    if (!selectedDeviceId) {
+      showMessage('danger', 'No camera found.');
+      return;
+    }
+    console.log("Using device ID:", selectedDeviceId);
+    await codeReader.decodeFromVideoDevice(selectedDeviceId, video, (result, err) => {
+      if (result) {
+        console.log("QR code detected:", result.text);
+        if (scanning) {
+          scanning = false;
+          stopCamera();
+          processUrl(result.text);
+        }
+      }
+      if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.error("ZXing error:", err);
+      }
+    });
+  } catch (err) {
+    showMessage('danger', 'Error accessing camera: ' + err.message);
+    console.error(err);
+  }
+}
+
+
+    function stopCamera() {
+      if (codeReader) {
+        codeReader.reset();
+        codeReader = null;
+      }
+      video.srcObject?.getTracks().forEach(track => track.stop());
+      video.style.display = 'none';
+    }
+
+    switchModeBtn.addEventListener('click', () => {
+      if (scanning) {
+        // Switch to image upload mode
+        scanning = false;
+        stopCamera();
+        video.style.display = 'none';
+        uploadBtn.classList.remove('d-none');
+        switchModeBtn.textContent = 'Switch to Camera Scan';
+        clearMessage();
+      } else {
+        // Switch to camera scan mode
+        scanning = true;
+        uploadBtn.classList.add('d-none');
+        video.style.display = 'block';
+        switchModeBtn.textContent = 'Switch to Image Upload';
+        clearMessage();
+        startCamera();
+      }
+    });
+
+    uploadBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async () => {
+      if (fileInput.files.length === 0) return;
+      clearMessage();
+      showMessage('info', 'Processing image, please wait...');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        if (data.error) {
+          showMessage('danger', data.error);
+        } else {
+          displayResult(data.url, data.score);
+        }
+      } catch {
+        showMessage('danger', 'Error processing the image.');
+      }
+    });
+
+    async function processUrl(url) {
+      showMessage('info', `Scanned URL: <code>${url}</code><br>Checking safety...`);
+
+      try {
+        const response = await fetch('/predict-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await response.json();
+        if (data.error) {
+          showMessage('danger', data.error);
+        } else {
+          displayResult(data.url, data.score);
+        }
+      } catch {
+        showMessage('danger', 'Error checking URL.');
+      }
+    }
+
+function displayResult(url, score) {
+  if (score > 80) {
+    // Block and alert
+    alert(`❌ Highly Malicious URL detected!\n\nURL: ${url}\nLikelihood: ${score.toFixed(2)}%\n\nAccess blocked.`);
+    showMessage('danger', `❌ <strong>Highly Malicious URL detected!</strong><br>URL: <code>${url}</code><br>Likelihood: ${score.toFixed(2)}%<br><strong>Access blocked.</strong>`);
+  } else if (score > 50 && score <= 80) {
+    // Ask user confirmation
+    const proceed = confirm(`⚠️ Possibly Malicious URL detected!\n\nURL: ${url}\nLikelihood: ${score.toFixed(2)}%\n\nDo you want to proceed anyway?`);
+    if (proceed) {
+      // Open in same tab - less likely blocked by popup blocker
+      window.location.href = url;
+      showMessage('warning', `⚠️ <strong>Proceeding to URL with caution.</strong><br>URL: <code>${url}</code><br>Likelihood: ${score.toFixed(2)}%`);
+    } else {
+      showMessage('warning', `Operation cancelled by user.<br>URL: <code>${url}</code>`);
+    }
+  } else if (score > 30 && score <= 50) {
+  alert(`⚠️ Suspicious URL detected!\n\nURL: ${url}\nLikelihood: ${score.toFixed(2)}%\n\nYou will be redirected now.`);
+  // Direct redirect immediately after alert closes
+  window.location.href = url;
+  showMessage('info', `⚠️ <strong>Suspicious URL.</strong><br>Redirected to: <code>${url}</code><br>Likelihood: ${score.toFixed(2)}%`);
+} else {
+    // Safe, redirect directly
+    window.location.href = url;
+    showMessage('success', `✅ <strong>URL is safe.</strong><br>Redirected to: <code>${url}</code><br>Likelihood: ${score.toFixed(2)}%`);
+  }
+}
+// On page load, if scanning mode is true, start camera and show video
+window.addEventListener('load', () => {
+  if (scanning) {
+    video.style.display = 'block';
+    startCamera();
+  }
+});
+
+
+  </script>
+</body>
+</html>
